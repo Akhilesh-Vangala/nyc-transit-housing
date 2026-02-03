@@ -1,0 +1,34 @@
+# Data (large or sensitive)
+data/raw/*.csv
+data/raw/*.geojson
+data/raw/*.manifest.json
+data/processed/*.rds
+data/processed/*.gpkg
+data/processed/*.json
+data/intermediate/*.rds
+data/intermediate/*.csv
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/intermediate/.gitkeep
+
+# Outputs (regenerated locally; do not commit)
+outputs/
+**/*_files/
+*.html
+
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+renv/library
+renv/local
+
+# Report artifacts
+report.html
+report.pdf
+
+# OS
+.DS_Store
+Thumbs.db

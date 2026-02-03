@@ -1,0 +1,117 @@
+---
+title: "NYC Affordable Housing and Transit Proximity"
+author: ""
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+    theme: flatly
+---
+
+```{r setup, include = FALSE}
+library(here)
+library(readr)
+library(dplyr)
+library(sf)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.path = "outputs/figures/")
+setwd(here::here())
+source("config.R")
+```
+
+# Purpose
+
+Transit-proximity analysis for NYC HPD affordable housing: share of units within 250 m, 500 m, and 1 km of subway stations, by borough and distance band.
+
+# Data
+
+Subway: MTA Subway Stations (NY State Open Data). HPD buildings: NYC Open Data, Housing New York Units by Building; coordinates from 03b (direct/internal/fallback). Buffer radii: 250, 500, 1000 m (`config.R`).
+
+# Data quality and exploratory checks
+
+```{r eda-coord-source}
+path_coord <- file.path(OUT_TABLES, "coord_source_summary.csv")
+path_pct <- file.path(OUT_TABLES, "coord_source_pct.csv")
+if (file.exists(path_coord)) {
+  cts <- read_csv(path_coord, show_col_types = FALSE)
+  knitr::kable(cts, format = "html", digits = 2)
+}
+if (file.exists(path_pct)) {
+  pct <- read_csv(path_pct, show_col_types = FALSE)
+  knitr::kable(pct, format = "html", digits = 2)
+}
+path_fig_coord <- file.path(OUT_FIGURES, "fig_eda_coord_source.png")
+if (file.exists(path_fig_coord)) {
+  knitr::include_graphics(path_fig_coord)
+}
+```
+
+```{r eda-units}
+path_summ <- file.path(OUT_TABLES, "eda_buildings_summary.csv")
+if (file.exists(path_summ)) {
+  summ <- read_csv(path_summ, show_col_types = FALSE)
+  knitr::kable(summ, format = "html", digits = 2)
+}
+path_fig_units <- file.path(OUT_FIGURES, "fig_eda_units_distribution.png")
+if (file.exists(path_fig_units)) {
+  knitr::include_graphics(path_fig_units)
+}
+```
+
+# Units by buffer radius
+
+```{r units-by-buffer, fig.cap = "Share of units within 250 m, 500 m, and 1 km of nearest subway (reliable coords)."}
+path_reliable <- file.path(OUT_TABLES, "units_by_buffer_reliable_coords.csv")
+path_tbl <- file.path(OUT_TABLES, "units_by_buffer.csv")
+path_tbl <- if (file.exists(path_reliable)) path_reliable else path_tbl
+if (file.exists(path_tbl)) {
+  tbl <- read_csv(path_tbl, show_col_types = FALSE)
+  knitr::kable(tbl, format = "html", digits = 2)
+  tbl$buffer_m <- factor(tbl$buffer_m, levels = c(250, 500, 1000), labels = c("250 m", "500 m", "1 km"))
+  p <- ggplot(tbl, aes(x = buffer_m, y = pct_units_near_transit)) +
+    geom_col(fill = "#2c3e50", width = 0.65) +
+    geom_text(aes(label = sprintf("%.1f%%", pct_units_near_transit)), vjust = -0.35, size = 3.5) +
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.12)), labels = function(x) paste0(x, "%")) +
+    labs(x = "Distance to nearest subway", y = "Share of units within buffer") +
+    theme_minimal(base_size = 11) + theme(legend.position = "none", panel.grid.major.x = element_blank())
+  print(p)
+}
+```
+
+# Units by borough (500 m)
+
+```{r units-by-borough}
+path_boro_reliable <- file.path(OUT_TABLES, "units_by_borough_500m_reliable.csv")
+path_boro <- file.path(OUT_TABLES, "units_by_borough_500m.csv")
+path_boro <- if (file.exists(path_boro_reliable)) path_boro_reliable else path_boro
+if (file.exists(path_boro)) {
+  tbl_boro <- read_csv(path_boro, show_col_types = FALSE)
+  knitr::kable(tbl_boro, format = "html", digits = 2, caption = "Units within 500 m by borough.")
+}
+```
+
+# Map: share within 500 m by neighborhood (NTA)
+
+```{r map-nta}
+path_map <- file.path(OUT_FIGURES, "fig_nta_choropleth.png")
+if (file.exists(path_map)) {
+  knitr::include_graphics(path_map)
+}
+```
+
+# Distance distribution
+
+```{r distance-band}
+path_dist <- file.path(OUT_TABLES, "units_by_distance_band.csv")
+if (file.exists(path_dist)) {
+  tbl_dist <- read_csv(path_dist, show_col_types = FALSE)
+  knitr::kable(tbl_dist, format = "html")
+  p2 <- ggplot(tbl_dist, aes(x = dist_band, y = units, fill = dist_band)) +
+    geom_col() +
+    labs(x = "Distance to nearest subway", y = "Units") +
+    theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+  print(p2)
+}
+```
